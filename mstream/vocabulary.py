@@ -10,4 +10,3 @@ class Vocabulary:
 
     def __len__(self):
         return len(self.__vocabulary)
-

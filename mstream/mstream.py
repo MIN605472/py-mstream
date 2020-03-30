@@ -1,4 +1,7 @@
 from mstream.clusterfeature import ClusterFeatureVector
+from mstream.vocabulary import Vocabulary
+from mstream.document import Document
+
 
 class Mstream:
     def __init__(self, filename):
@@ -13,13 +16,13 @@ class Mstream:
         self.__alpha = alpha
         self.__beta = beta
         self.__words_topic_num = words_topic_num
-        self.__clusters = ClusterFeatureVector()
+        self.__clusters = ClusterFeatureVector(alpha, beta, self.__vocabulary)
         self.__free_cluster_ids = [0]
 
     def process(self, batch):
         doc_batch = []
         for doc in batch:
-            doc_batch.append(Document(doc["id"], doc["word_list"]))
+            doc_batch.append(Document(doc["id"], doc["word_list"], self.__vocabulary))
         self.__first_pass(doc_batch)
         self.__gibbs_sample(doc_batch)
 
@@ -28,10 +31,10 @@ class Mstream:
 
     def __first_pass(self, docs):
         for doc in docs:
-            doc.cluster_id  = self.__clusters.sample_and_add(doc)
+            doc.cluster_id = self.__clusters.sample_and_add(doc)
 
     def __gibbs_sample(self, docs):
-        for i in range(self.__iter__num - 1):
+        for i in range(self.__iter_num - 1):
             for doc in docs:
                 self.__clusters.sub(doc, doc.cluster_id)
                 self.__clusters.sample_and_add(doc)

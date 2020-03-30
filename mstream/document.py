@@ -4,8 +4,9 @@ class Document:
         self.cluster_id = -1
         self.__bow = {}
         for word in word_list:
-            freq = self.__bow.set_default(word, 0)
+            freq = self.__bow.setdefault(word, 0)
             self.__bow[word] += 1
+            vocabulary.add(word)
 
     def total_len(self):
         total = 0
@@ -20,9 +21,7 @@ class Document:
         return len(self.__bow)
 
     def __iter__(self):
-        return iter(self.__bow)
+        return iter(self.__bow.items())
 
     def __next__(self):
         return next(self.__bow)
-
-
