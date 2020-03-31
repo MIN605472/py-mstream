@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class IdPool:
     def __init__(self):
         self.__k = 0
@@ -35,10 +36,16 @@ class ClusterFeatureVector:
     def sample_and_add(self, doc):
         if self.__num_total_docs == 0:
             cluster_id = self.__idpool.acquire()
-            self.__add(doc, cluster_id)
-            return cluster_id
+        else:
+            cluster_id = self.__sample_cluster(doc)
+        self.__add(doc, cluster_id)
+        return cluster_id
 
-        cluster_id = self.__sample_cluster(doc)
+    def pick_max_and_add(self, doc):
+        if self.__num_total_docs == 0:
+            cluster_id = self.__idpool.acquire()
+        else:
+            cluster_id = self.__pick_cluster_max_prob(doc)
         self.__add(doc, cluster_id)
         return cluster_id
 
@@ -50,6 +57,13 @@ class ClusterFeatureVector:
             self.__idpool.release(values[-1])
         return sampled_cluster
 
+    def __pick_cluster_max_prob(self, doc):
+        values, cluster_dist = self.__cluster_dist(doc)
+        max_prob_cluster = values[np.argmax(cluster_dist)]
+        if max_prob_cluster != values[-1]:
+            self.__idpool.release(values[-1])
+        return max_prob_cluster
+
     def __add(self, doc, cluster_id):
         cluster_feature = self.__cluster_features.setdefault(
             cluster_id, ClusterFeature()
@@ -59,8 +73,7 @@ class ClusterFeatureVector:
 
     def __cluster_dist(self, doc):
         values = np.array(
-            list(self.__cluster_features.keys()) + [self.__idpool.acquire()],
-            dtype=int,
+            list(self.__cluster_features.keys()) + [self.__idpool.acquire()], dtype=int,
         )
         dist = np.zeros(len(self.__cluster_features) + 1)
         for i, cluster_id in enumerate(self.__cluster_features):
@@ -136,8 +149,8 @@ def _old_cluster_prob(doc, cluster, vocab_size, num_total_docs, alpha, beta):
     Probability of a document being part an existing cluster.
     """
     p_cluster = cluster.num_docs() / (num_total_docs - 1 + alpha * num_total_docs)
+    numerator = 1
     for w, freq in doc:
-        numerator = 1
         word_freq = cluster.word_freq(w)
         for j in range(1, freq + 1):
             numerator *= word_freq + beta + j - 1
@@ -148,17 +161,17 @@ def _old_cluster_prob(doc, cluster, vocab_size, num_total_docs, alpha, beta):
     return p_cluster * p_sim
 
 
-def _new_cluster_prob(doc, V, D, alpha, beta):
+def _new_cluster_prob(doc, vocab_size, num_total_docs, alpha, beta):
     """
     Probability of a document being part of a new cluster.
     """
-    p_cluster = alpha * D / (D - 1 + alpha * D)
+    p_cluster = alpha * num_total_docs / (num_total_docs - 1 + alpha * num_total_docs)
     numerator = 1
     for w, freq in doc:
         for j in range(1, freq + 1):
             numerator *= beta + j - 1
     denominator = 1
     for i in range(1, len(doc) + 1):
-        denominator *= V * beta + i - 1
+        denominator *= vocab_size * beta + i - 1
     p_sim = numerator / denominator
     return p_cluster * p_sim

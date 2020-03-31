@@ -1,6 +1,6 @@
 class Document:
-    def __init__(self, id, word_list, vocabulary):
-        self.id = id
+    def __init__(self, id_, word_list, vocabulary):
+        self.id = id_
         self.cluster_id = -1
         self.__bow = {}
         for word in word_list:
@@ -24,8 +24,8 @@ class Document:
     def __iter__(self):
         return iter(self.__bow.items())
 
-    def __next__(self):
-        return next(self.__bow)
+    # def __next__(self):
+    #     return next(self.__bow)
 
     def __str__(self):
         return str(self__.bow)
