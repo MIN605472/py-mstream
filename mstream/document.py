@@ -4,13 +4,14 @@ class Document:
         self.cluster_id = -1
         self.__bow = {}
         for word in word_list:
-            freq = self.__bow.setdefault(word, 0)
+            if word not in self.__bow:
+                self.__bow[word] = 0
             self.__bow[word] += 1
             vocabulary.add(word)
 
     def total_len(self):
         total = 0
-        for _, freq in self.__bow:
+        for _, freq in self.__bow.items():
             total += freq
         return total
 
@@ -25,3 +26,6 @@ class Document:
 
     def __next__(self):
         return next(self.__bow)
+
+    def __str__(self):
+        return str(self__.bow)
