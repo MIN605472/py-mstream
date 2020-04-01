@@ -46,6 +46,28 @@ class Mstream:
             doc.cluster_id = self.__clusters.pick_max_and_add(doc)
 
     def __estimate_posterior(self):
-        phi_zv = {}
-        for cluster in self.clusters:
-            pass
+        phi_zw = {}
+        for cluster_id, cluster in self.__clusters:
+            if cluster_id not in phi_zw:
+                phi_zw[cluster_id] = {}
+                for word, freq in cluster:
+                    if freq != 0:
+                        phi_zw[cluster_id][word] = (freq + self.__beta) / (
+                            cluster.num_words_with_rep()
+                            + len(self.__vocabulary) * self.__beta
+                        )
+        return phi_zw
+
+
+    def get_top_words(self,num_words_topic=50):
+        top_words_topic = {}
+        topic_word_dist = self.__estimate_posterior()
+        print(topic_word_dist)
+        for topic, word_prob in topic_word_dist:
+            l = list(word_prob.items())
+            l.sort(key=lambda x: x[1])
+            total = sum([p for _, p in l])
+            top_words = l[:num_words_topic]
+            top_words = [(w, p / total) for w, p in top_words]
+            top_words_topic[topic] = dict(top_words) 
+        return top_words_topic

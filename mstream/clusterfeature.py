@@ -95,6 +95,9 @@ class ClusterFeatureVector:
         factor = 1.0 / np.sum(dist)
         return values, dist * factor
 
+    def __iter__(self):
+        return iter(self.__cluster_features.items())
+
 
 class ClusterFeature:
     def __init__(self):
@@ -139,6 +142,12 @@ class ClusterFeature:
             return 0
 
         return self.__n_zw[word]
+
+    def num_words_with_rep(self):
+        return sum(self.__n_zw.values())
+
+    def __iter__(self):
+        return iter(self.__n_zw.items())
 
     def __str__(self):
         return f"word_freq: {self.__n_zw}; num_docs: {self.__m_z}; num_totaal_words: {self.__n_z}"
