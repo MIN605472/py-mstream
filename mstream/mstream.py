@@ -62,12 +62,11 @@ class Mstream:
     def get_top_words(self,num_words_topic=50):
         top_words_topic = {}
         topic_word_dist = self.__estimate_posterior()
-        print(topic_word_dist)
-        for topic, word_prob in topic_word_dist:
+        for topic, word_prob in topic_word_dist.items():
             l = list(word_prob.items())
             l.sort(key=lambda x: x[1])
             total = sum([p for _, p in l])
             top_words = l[:num_words_topic]
             top_words = [(w, p / total) for w, p in top_words]
-            top_words_topic[topic] = dict(top_words) 
+            top_words_topic[topic] = dict(top_words)
         return top_words_topic
