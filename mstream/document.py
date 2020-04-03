@@ -4,10 +4,10 @@ class Document:
         self.cluster_id = -1
         self.__bow = {}
         for word in word_list:
-            if word not in self.__bow:
-                self.__bow[word] = 0
-            self.__bow[word] += 1
-            vocabulary.add(word)
+            word_id = vocabulary.add(word)
+            if word_id not in self.__bow:
+                self.__bow[word_id] = 0
+            self.__bow[word_id] += 1
 
     def total_len(self):
         total = 0
@@ -23,9 +23,6 @@ class Document:
 
     def __iter__(self):
         return iter(self.__bow.items())
-
-    # def __next__(self):
-    #     return next(self.__bow)
 
     def __str__(self):
         return str(self__.bow)

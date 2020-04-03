@@ -1,85 +1,68 @@
 import numpy as np
 
 
-class IdPool:
-    def __init__(self):
-        self.__k = 0
-        self.__free_ids = []
-
-    def acquire(self):
-        if len(self.__free_ids) != 0:
-            return self.__free_ids.pop()
-        else:
-            self.__k += 1
-            return self.__k - 1
-
-    def release(self, id_):
-        self.__free_ids.append(id_)
-
-
 class ClusterFeatureVector:
     def __init__(self, alpha, beta, vocabulary):
-        self.__cluster_features = {}
-        self.__idpool = IdPool()
+        self.__cluster_features = []
         self.__vocabulary = vocabulary
         self.__num_total_docs = 0
         self.__alpha = alpha
         self.__beta = beta
 
     def sub(self, doc, cluster_id):
+        """
+        Subtract document `doc` from the cluster feature that has id `cluster_id`.
+        """
         self.__cluster_features[cluster_id].sub(doc)
         if self.__cluster_features[cluster_id].empty():
-            self.__cluster_features.pop(cluster_id)
-            self.__idpool.release(cluster_id)
+            last_cf = self.__cluster_features.pop()
+            if cluster_id != len(self.__cluster_features):
+                self.__cluster_features[cluster_id] = last_cf
         self.__num_total_docs -= 1
 
     def sample_and_add(self, doc):
-        if self.__num_total_docs == 0:
-            cluster_id = self.__idpool.acquire()
-        else:
-            cluster_id = self.__sample_cluster(doc)
+        """
+        Sample the cluster to which document `doc` should belong and add the document to the cluster.
+        """
+        if len(self.__cluster_features) == 0:
+            self.__cluster_features.append(ClusterFeature())
+            self.__add(doc, 0)
+            return 0
+
+        cluster_id = self.__sample_cluster(doc)
+        if cluster_id == len(self.__cluster_features):
+            self.__cluster_features.append(ClusterFeature())
         self.__add(doc, cluster_id)
         return cluster_id
 
     def pick_max_and_add(self, doc):
-        if self.__num_total_docs == 0:
-            cluster_id = self.__idpool.acquire()
-        else:
-            cluster_id = self.__pick_cluster_max_prob(doc)
+        """
+        Add the document `doc` to the cluster for which it has the highest probability.
+        """
+        cluster_id = self.__pick_cluster_max_prob(doc)
+        if cluster_id == len(self.__cluster_features):
+            self.__cluster_features.append(ClusterFeature())
         self.__add(doc, cluster_id)
         return cluster_id
 
     def __sample_cluster(self, doc):
-        values, cluster_dist = self.__cluster_dist(doc)
-        # from IPython.core.debugger import set_trace; set_trace()
-        sampled_cluster = np.random.choice(values, p=cluster_dist)
-        if sampled_cluster != values[-1]:
-            self.__idpool.release(values[-1])
-        return sampled_cluster
+        cluster_dist = self.__cluster_dist(doc)
+        return np.random.choice(len(cluster_dist), p=cluster_dist)
 
     def __pick_cluster_max_prob(self, doc):
-        values, cluster_dist = self.__cluster_dist(doc)
-        max_prob_cluster = values[np.argmax(cluster_dist)]
-        if max_prob_cluster != values[-1]:
-            self.__idpool.release(values[-1])
-        return max_prob_cluster
+        cluster_dist = self.__cluster_dist(doc)
+        return np.argmax(cluster_dist)
 
     def __add(self, doc, cluster_id):
-        cluster_feature = self.__cluster_features.setdefault(
-            cluster_id, ClusterFeature()
-        )
-        cluster_feature.add(doc)
+        self.__cluster_features[cluster_id].add(doc)
         self.__num_total_docs += 1
 
     def __cluster_dist(self, doc):
-        values = np.array(
-            list(self.__cluster_features.keys()) + [self.__idpool.acquire()], dtype=int,
-        )
         dist = np.zeros(len(self.__cluster_features) + 1)
-        for i, cluster_id in enumerate(self.__cluster_features):
+        for i, cluster in enumerate(self.__cluster_features):
             dist[i] = _old_cluster_prob(
                 doc,
-                self.__cluster_features[cluster_id],
+                cluster,
                 len(self.__vocabulary),
                 self.__num_total_docs,
                 self.__alpha,
@@ -93,10 +76,13 @@ class ClusterFeatureVector:
             self.__beta,
         )
         factor = 1.0 / np.sum(dist)
-        return values, dist * factor
+        return dist * factor
+
+    def __len__(self):
+        return len(self.__cluster_features)
 
     def __iter__(self):
-        return iter(self.__cluster_features.items())
+        return iter(self.__cluster_features)
 
 
 class ClusterFeature:
@@ -113,10 +99,10 @@ class ClusterFeature:
         Add the given document to this vector of cluster feature.
         """
         self.__m_z += 1
-        for w, freq in doc:
-            if w not in self.__n_zw:
-                self.__n_zw[w] = 0
-            self.__n_zw[w] += freq
+        for word_id, freq in doc:
+            if word_id not in self.__n_zw:
+                self.__n_zw[word_id] = 0
+            self.__n_zw[word_id] += freq
             self.__n_z += freq
 
     def sub(self, doc):
@@ -124,8 +110,8 @@ class ClusterFeature:
         Subtract or remove the given document from this vector of cluster feature.
         """
         self.__m_z -= 1
-        for w, freq in doc:
-            self.__n_zw[w] -= freq
+        for word_id, freq in doc:
+            self.__n_zw[word_id] -= freq
             self.__n_z -= freq
 
     def empty(self):
@@ -137,11 +123,11 @@ class ClusterFeature:
     def num_words(self):
         return self.__n_z
 
-    def word_freq(self, word):
-        if word not in self.__n_zw:
+    def word_freq(self, word_id):
+        if word_id not in self.__n_zw:
             return 0
 
-        return self.__n_zw[word]
+        return self.__n_zw[word_id]
 
     def num_words_with_rep(self):
         return sum(self.__n_zw.values())
@@ -159,8 +145,8 @@ def _old_cluster_prob(doc, cluster, vocab_size, num_total_docs, alpha, beta):
     """
     p_cluster = cluster.num_docs() / (num_total_docs - 1 + alpha * num_total_docs)
     numerator = 1
-    for w, freq in doc:
-        word_freq = cluster.word_freq(w)
+    for word_id, freq in doc:
+        word_freq = cluster.word_freq(word_id)
         for j in range(1, freq + 1):
             numerator *= word_freq + beta + j - 1
     denominator = 1
@@ -176,7 +162,7 @@ def _new_cluster_prob(doc, vocab_size, num_total_docs, alpha, beta):
     """
     p_cluster = alpha * num_total_docs / (num_total_docs - 1 + alpha * num_total_docs)
     numerator = 1
-    for w, freq in doc:
+    for _, freq in doc:
         for j in range(1, freq + 1):
             numerator *= beta + j - 1
     denominator = 1
