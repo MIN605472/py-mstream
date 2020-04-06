@@ -1,6 +1,7 @@
 from mstream.clusterfeature import ClusterFeatureVector
 from mstream.vocabulary import Vocabulary
 from mstream.document import Document
+import numpy as np
 
 
 class Mstream:
@@ -20,17 +21,21 @@ class Mstream:
     def process(self, batch):
         doc_batch = []
         for doc in batch:
-            doc_batch.append(Document(doc["id"], doc["word_list"], self.vocabulary))
+            doc_batch.append(Document(doc["id"], doc["words"], self.vocabulary))
+        # from IPython.core.debugger import set_trace; set_trace()
         self.__first_pass(doc_batch)
         self.__gibbs_sample(doc_batch)
         self.__pick_max_prob(doc_batch)
         return [doc.cluster_id for doc in doc_batch]
 
     def topics(self):
-        topic_ids = np.zeros(len(self.__clusters))
+        topic_ids = np.zeros(len(self.__clusters), dtype=int)
         for i, (cluster_id, _) in enumerate(self.__clusters):
             topic_ids[i] = cluster_id
         return topic_ids
+
+    def num_topics(self):
+        return len(self.__clusters)
 
     def topic_pmf(self):
         pmf = np.zeros(len(self.__clusters))
@@ -40,12 +45,11 @@ class Mstream:
 
     def topic_term_pmf(self):
         pmf = np.zeros((len(self.__clusters), len(self.vocabulary)))
-        topic_word_dist = self.__estimate_posterior()
-        for i, (topic, word_prob) in enumerate(topic_word_dist.items()):
-            pass
-
-
-
+        topic_wordid_dist = self.__estimate_posterior()
+        for i, (topic, wordid_prob) in enumerate(topic_wordid_dist.items()):
+            for wordid, prob in wordid_prob.items():
+                pmf[i, wordid] = prob
+        return pmf / pmf.sum(axis=0)
 
     def get_top_words(self, num_words_topic=50):
         top_words_topic = {}

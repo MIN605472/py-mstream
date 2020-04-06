@@ -1,9 +1,9 @@
 class Document:
-    def __init__(self, id_, word_list, vocabulary):
+    def __init__(self, id_, words, vocabulary):
         self.id = id_
         self.cluster_id = -1
         self.__bow = {}
-        for word in word_list:
+        for word in words:
             word_id = vocabulary.add(word)
             if word_id not in self.__bow:
                 self.__bow[word_id] = 0
