@@ -1,13 +1,14 @@
 class Document:
-    def __init__(self, id_, words, vocabulary):
+    def __init__(self, id_, terms, vocabulary, topic=None):
         self.id = id_
-        self.cluster_id = -1
+        # the object to thich topic points is constant and not modifiable
+        self.topic = topic
         self.__bow = {}
-        for word in words:
-            word_id = vocabulary.add(word)
-            if word_id not in self.__bow:
-                self.__bow[word_id] = 0
-            self.__bow[word_id] += 1
+        for term in terms:
+            term_id = vocabulary.add(term)
+            if term_id not in self.__bow:
+                self.__bow[term_id] = 0
+            self.__bow[term_id] += 1
 
     def total_len(self):
         total = 0
@@ -15,8 +16,8 @@ class Document:
             total += freq
         return total
 
-    def freq(self, word):
-        return self.__bow[word]
+    def freq(self, term):
+        return self.__bow[term]
 
     def __len__(self):
         return len(self.__bow)
