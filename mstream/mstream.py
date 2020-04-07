@@ -49,7 +49,7 @@ class Mstream:
         for i, (topic, wordid_prob) in enumerate(topic_wordid_dist.items()):
             for wordid, prob in wordid_prob.items():
                 pmf[i, wordid] = prob
-        return pmf / pmf.sum(axis=0)
+        return pmf / pmf.sum(axis=1)[:, None]
 
     def get_top_words(self, num_words_topic=50):
         top_words_topic = {}
@@ -84,12 +84,11 @@ class Mstream:
     def __estimate_posterior(self):
         phi_zw = {}
         for cluster_id, cluster in self.__clusters:
-            if cluster_id not in phi_zw:
-                phi_zw[cluster_id] = {}
-                for word_id, freq in cluster:
-                    if freq != 0:
-                        phi_zw[cluster_id][word_id] = (freq + self.__beta) / (
-                            cluster.num_words_with_rep()
-                            + len(self.vocabulary) * self.__beta
-                        )
+            phi_zw[cluster_id] = {}
+            s = cluster.num_words_with_rep()
+            for word_id, freq in cluster:
+                if freq != 0:
+                    phi_zw[cluster_id][word_id] = (freq + self.__beta) / (
+                        s + len(self.vocabulary) * self.__beta
+                    )
         return phi_zw
