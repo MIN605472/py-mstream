@@ -45,7 +45,7 @@ class ClusterFeatureVector:
 
     def __pick_cluster_max_prob(self, doc):
         cluster_pmf = self.__cluster_pmf(doc)
-        return np.argmax(cluster_pmf)
+        return np.argmax(cluster_pmf).item()
 
     def __add(self, doc, cluster_id):
         assert cluster_id <= len(self.__cfs)
@@ -139,16 +139,17 @@ class ClusterFeature:
 
 def _old_cluster_prob(doc, cluster, vocab_size, num_total_docs, alpha, beta):
     """
-    Probability of document `doc` being part the existing cluster `cluster`.
+    Unormalized robability of document `doc` being part the existing cluster `cluster`.
     """
-    p_cluster = cluster.num_docs() / (num_total_docs - 1 + alpha * num_total_docs)
+    # we can remove the denominator because it's a constant; doesn't affect proportionality
+    p_cluster = cluster.num_docs() # / (num_total_docs - 1 + alpha * num_total_docs)
     numerator = 1
     for term_id, freq in doc:
         term_freq = cluster.term_freq(term_id)
         for j in range(1, freq + 1):
             numerator *= term_freq + beta + j - 1
     denominator = 1
-    for i in range(1, len(doc) + 1):
+    for i in range(1, doc.total_len() + 1):
         denominator *= cluster.num_terms() + vocab_size * beta + i - 1
     p_sim = numerator / denominator
     return p_cluster * p_sim
@@ -156,15 +157,16 @@ def _old_cluster_prob(doc, cluster, vocab_size, num_total_docs, alpha, beta):
 
 def _new_cluster_prob(doc, vocab_size, num_total_docs, alpha, beta):
     """
-    Probability of document `doc` being part of a new cluster.
+    Unormalized probability of document `doc` being part of a new cluster.
     """
-    p_cluster = alpha * num_total_docs / (num_total_docs - 1 + alpha * num_total_docs)
+    # we can remove the denominator because it's a constant; doesn't affect proportionality
+    p_cluster = alpha * num_total_docs # / (num_total_docs - 1 + alpha * num_total_docs)
     numerator = 1
     for _, freq in doc:
         for j in range(1, freq + 1):
             numerator *= beta + j - 1
     denominator = 1
-    for i in range(1, len(doc) + 1):
+    for i in range(1, doc.total_len() + 1):
         denominator *= vocab_size * beta + i - 1
     p_sim = numerator / denominator
     return p_cluster * p_sim
