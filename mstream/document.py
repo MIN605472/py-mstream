@@ -3,6 +3,7 @@ class Document:
         self.id = id_
         # the object to thich topic points is constant and not modifiable
         self.topic = topic
+        self.__total_len = len(terms)
         self.__bow = {}
         for term in terms:
             term_id = vocabulary.add(term)
@@ -11,10 +12,7 @@ class Document:
             self.__bow[term_id] += 1
 
     def total_len(self):
-        total = 0
-        for _, freq in self.__bow.items():
-            total += freq
-        return total
+        return self.__total_len
 
     def freq(self, term):
         return self.__bow[term]

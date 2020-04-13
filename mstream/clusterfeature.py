@@ -146,11 +146,13 @@ def _old_cluster_prob(doc, cluster, vocab_size, num_total_docs, alpha, beta):
     numerator = 1
     for term_id, freq in doc:
         term_freq = cluster.term_freq(term_id)
-        for j in range(1, freq + 1):
-            numerator *= term_freq + beta + j - 1
+        for j in range(freq):
+            # numerator *= term_freq + beta + j - 1
+            numerator *= term_freq + beta + j
     denominator = 1
-    for i in range(1, doc.total_len() + 1):
-        denominator *= cluster.num_terms() + vocab_size * beta + i - 1
+    for i in range(doc.total_len()):
+        # denominator *= cluster.num_terms() + vocab_size * beta + i - 1
+        denominator *= cluster.num_terms() + vocab_size * beta + i
     p_sim = numerator / denominator
     return p_cluster * p_sim
 
@@ -163,10 +165,11 @@ def _new_cluster_prob(doc, vocab_size, num_total_docs, alpha, beta):
     p_cluster = alpha * num_total_docs # / (num_total_docs - 1 + alpha * num_total_docs)
     numerator = 1
     for _, freq in doc:
-        for j in range(1, freq + 1):
-            numerator *= beta + j - 1
+        for j in range(freq):
+            # numerator *= beta + j - 1
+            numerator *= beta + j
     denominator = 1
-    for i in range(1, doc.total_len() + 1):
-        denominator *= vocab_size * beta + i - 1
+    for i in range(doc.total_len()):
+        denominator *= vocab_size * beta + i
     p_sim = numerator / denominator
     return p_cluster * p_sim
